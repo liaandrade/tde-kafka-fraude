@@ -25,15 +25,15 @@ Simulação de um sistema de detecção de fraude em transações financeiras us
 | **Consumer Group** | Grupo que divide/lembra a leitura (offset) | `detector-fraude` |
 | **Offset** | Posição da mensagem no tópico | Impresso pelo producer |
 
-## 🔎 Regras de fraude
+##  Regras de fraude
 
 Todas olham o **histórico do mesmo cliente** (consultado no SQLite):
 
 | Alerta | Regra | Cor |
 |---|---|---|
-| `ALTO_VALOR` | `valor >= 10.000` | 🔴 Vermelho |
-| `TEMPO_60s` | 4 (ou mais) transações do mesmo cliente em menos de 60 segundos | 🟡 Amarelo |
-| `GEO_10m` | Transações do mesmo cliente em **cidades diferentes** dentro de 10 minutos | 🟣 Magenta |
+| `ALTO_VALOR` | `valor >= 10.000` |  Vermelho |
+| `TEMPO_60s` | 4 (ou mais) transações do mesmo cliente em menos de 60 segundos | Amarelo |
+| `GEO_10m` | Transações do mesmo cliente em **cidades diferentes** dentro de 10 minutos |  Magenta |
 
 Uma mesma transação pode disparar mais de um alerta. **Todas** as transações são salvas no banco, com ou sem fraude.
 
@@ -157,7 +157,7 @@ Ou abra o arquivo `transacoes.db` no [DB Browser for SQLite](https://sqlitebrows
 sqlite3 transacoes.db "SELECT * FROM transacoes ORDER BY timestamp DESC LIMIT 10;"
 ```
 
-### 6️⃣ Parar tudo
+### 6 Parar tudo
 
 ```bash
 # Ctrl+C no Producer e no Consumer, depois:
