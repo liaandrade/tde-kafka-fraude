@@ -1,0 +1,4 @@
+# Cliente Kafka para Python
+kafka-python
+# Cores no terminal (funciona também no Windows)
+colorama
