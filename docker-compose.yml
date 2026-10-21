@@ -1,0 +1,37 @@
+# ============================================================
+# Kafka local para estudos (1 único broker, modo KRaft).
+# KRaft = Kafka sem Zookeeper: só 1 container, bem mais simples.
+#
+# Subir:    docker compose up -d
+# Logs:     docker compose logs -f kafka
+# Derrubar: docker compose down
+# ============================================================
+services:
+  kafka:
+    image: apache/kafka:3.8.0
+    container_name: kafka
+    ports:
+      - "9092:9092"   # porta que o Producer/Consumer (no seu PC) vão usar
+    environment:
+      # Este nó é ao mesmo tempo "broker" (guarda mensagens) e "controller" (gerencia o cluster)
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+
+      # Portas em que o Kafka escuta dentro do container
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+
+      # Endereço que o Kafka "anuncia" para os clientes (seus scripts Python no PC)
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+
+      # Como temos só 1 broker, tudo com fator de replicação 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
+      # Cria o tópico automaticamente na primeira mensagem enviada
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"

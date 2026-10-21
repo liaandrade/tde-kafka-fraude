@@ -1,0 +1,6 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+# Banco gerado pelo consumer
+*.db
