@@ -1,14 +1,4 @@
-"""
-CONSUMER - lê transações do Kafka, salva TODAS no SQLite e aplica as regras de fraude.
 
-Regras (todas baseadas no histórico do MESMO cliente):
-    1. ALTO_VALOR : valor >= 10.000
-    2. TEMPO_60s  : 4 (ou mais) transações em menos de 60 segundos
-    3. GEO_10m    : transações em cidades diferentes dentro de 10 minutos
-
-Uso:
-    python consumer.py
-"""
 import json
 import sqlite3
 from datetime import datetime, timedelta
@@ -22,9 +12,9 @@ from config import (
     TEMPO_JANELA_SEG, TEMPO_QTD_TRANSACOES, TOPICO,
 )
 
-colorama_init()  # habilita cores ANSI também no Windows
+colorama_init()  
 
-# Cor de cada tipo de alerta no console
+
 CORES = {
     "ALTO_VALOR": Fore.RED,
     "TEMPO_60s": Fore.YELLOW,
@@ -36,7 +26,6 @@ CORES = {
 # BANCO DE DADOS
 # ----------------------------------------------------------------------
 def conectar_banco() -> sqlite3.Connection:
-    """Abre o SQLite e cria as tabelas caso ainda não existam."""
     conn = sqlite3.connect(ARQUIVO_BANCO)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS transacoes (
@@ -47,9 +36,7 @@ def conectar_banco() -> sqlite3.Connection:
             cidade       TEXT NOT NULL
         )
     """)
-    # Índice deixa as consultas de histórico por cliente rápidas
     conn.execute("CREATE INDEX IF NOT EXISTS idx_cliente_ts ON transacoes (id_cliente, timestamp)")
-    # Tabela extra (bônus): guarda os alertas gerados, útil para mostrar no trabalho
     conn.execute("""
         CREATE TABLE IF NOT EXISTS alertas (
             id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -65,7 +52,6 @@ def conectar_banco() -> sqlite3.Connection:
 
 
 def salvar_transacao(conn: sqlite3.Connection, t: dict) -> None:
-    """Salva a transação. INSERT OR IGNORE evita duplicar se a mensagem chegar 2x."""
     conn.execute(
         "INSERT OR IGNORE INTO transacoes VALUES (?, ?, ?, ?, ?)",
         (t["id_transacao"], t["id_cliente"], t["valor"], t["timestamp"], t["cidade"]),
@@ -81,12 +67,7 @@ def salvar_alerta(conn: sqlite3.Connection, t: dict, tipo: str, detalhe: str) ->
     conn.commit()
 
 
-# ----------------------------------------------------------------------
-# REGRAS DE FRAUDE
-# Cada regra devolve um texto (detalhe do alerta) ou None se não houve fraude.
-# IMPORTANTE: as regras são chamadas DEPOIS de salvar a transação atual,
-# então a consulta de histórico já inclui a transação que acabou de chegar.
-# ----------------------------------------------------------------------
+
 def regra_alto_valor(t: dict) -> str | None:
     if t["valor"] >= LIMITE_ALTO_VALOR:
         return f"Valor R$ {t['valor']:,.2f} >= R$ {LIMITE_ALTO_VALOR:,.2f}"
@@ -94,7 +75,6 @@ def regra_alto_valor(t: dict) -> str | None:
 
 
 def regra_tempo(conn: sqlite3.Connection, t: dict) -> str | None:
-    """4 ou mais transações do mesmo cliente nos últimos 60 segundos."""
     agora = datetime.fromisoformat(t["timestamp"])
     inicio = (agora - timedelta(seconds=TEMPO_JANELA_SEG)).isoformat(timespec="seconds")
 
@@ -109,7 +89,6 @@ def regra_tempo(conn: sqlite3.Connection, t: dict) -> str | None:
 
 
 def regra_geo(conn: sqlite3.Connection, t: dict) -> str | None:
-    """Cliente com transação em OUTRA cidade nos últimos 10 minutos."""
     agora = datetime.fromisoformat(t["timestamp"])
     inicio = (agora - timedelta(seconds=GEO_JANELA_SEG)).isoformat(timespec="seconds")
 
@@ -127,7 +106,6 @@ def regra_geo(conn: sqlite3.Connection, t: dict) -> str | None:
 
 
 def analisar(conn: sqlite3.Connection, t: dict) -> list[tuple[str, str]]:
-    """Roda as 3 regras e devolve a lista de alertas [(tipo, detalhe), ...]."""
     alertas = []
     for tipo, resultado in (
         ("ALTO_VALOR", regra_alto_valor(t)),
@@ -147,48 +125,40 @@ def criar_consumer() -> KafkaConsumer:
         return KafkaConsumer(
             TOPICO,
             bootstrap_servers=KAFKA_SERVIDOR,
-            # group_id: o Kafka lembra até onde esse "grupo" já leu (offset).
-            # Se você parar e voltar, ele continua de onde parou.
             group_id="detector-fraude",
-            # Primeira vez no grupo: começa do início do tópico
             auto_offset_reset="earliest",
-            # bytes -> JSON -> dicionário Python
             value_deserializer=lambda b: json.loads(b.decode("utf-8")),
         )
     except NoBrokersAvailable:
-        print("❌ Não consegui conectar no Kafka em", KAFKA_SERVIDOR)
-        print("   O Docker está rodando? Execute: docker compose up -d")
+        print(" Não consegui conectar no Kafka em", KAFKA_SERVIDOR)
+        print("  O Docker está rodando? Execute: docker compose up -d")
         raise SystemExit(1)
 
 
 def main():
     conn = conectar_banco()
     consumer = criar_consumer()
-    print(f"✅ Consumer conectado. Aguardando mensagens do tópico '{TOPICO}'... (Ctrl+C para parar)\n")
+    print(f"Consumer conectado. Aguardando mensagens do tópico '{TOPICO}'... (Ctrl+C para parar)\n")
 
     try:
-        # Este for fica "travado" esperando mensagens novas chegarem
         for mensagem in consumer:
             t = mensagem.value
 
-            # 1) Salva SEMPRE (fraude ou não)
             salvar_transacao(conn, t)
 
-            # 2) Aplica as regras de fraude
             alertas = analisar(conn, t)
 
-            # 3) Mostra no console
             resumo = (f"cliente={t['id_cliente']} valor=R$ {t['valor']:>9,.2f} "
                       f"cidade={t['cidade']:<15} {t['timestamp']}")
             if not alertas:
-                print(f"{Fore.GREEN}✔ OK      | {resumo}{Style.RESET_ALL}")
+                print(f"{Fore.GREEN} OK      | {resumo}{Style.RESET_ALL}")
             else:
-                print(f"{Style.BRIGHT}🚨 SUSPEITA | {resumo}{Style.RESET_ALL}")
+                print(f"{Style.BRIGHT}SUSPEITA | {resumo}{Style.RESET_ALL}")
                 for tipo, detalhe in alertas:
                     print(f"{CORES[tipo]}{Style.BRIGHT}   ⚠ ALERTA {tipo:<10} {detalhe}{Style.RESET_ALL}")
                     salvar_alerta(conn, t, tipo, detalhe)
     except KeyboardInterrupt:
-        print("\n🛑 Consumer encerrado.")
+        print("\n Consumer encerrado.")
     finally:
         consumer.close()
         conn.close()

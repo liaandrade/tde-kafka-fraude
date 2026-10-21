@@ -1,8 +1,8 @@
-# 🚨 Detecção de Fraude em Tempo Real com Apache Kafka (TDE 03)
+# Detecção de Fraude em Tempo Real com Apache Kafka (TDE 03)
 
 Simulação de um sistema de detecção de fraude em transações financeiras usando **Apache Kafka**, **Python** e **SQLite**.
 
-## 📐 Arquitetura
+## Arquitetura
 
 ```
 ┌────────────┐   JSON    ┌─────────────────────┐   JSON    ┌───────────────────────────┐
@@ -37,7 +37,7 @@ Todas olham o **histórico do mesmo cliente** (consultado no SQLite):
 
 Uma mesma transação pode disparar mais de um alerta. **Todas** as transações são salvas no banco, com ou sem fraude.
 
-## 📄 Formato da transação
+## Formato da transação
 
 ```json
 {
@@ -49,7 +49,7 @@ Uma mesma transação pode disparar mais de um alerta. **Todas** as transações
 }
 ```
 
-## 📁 Estrutura do projeto
+##  Estrutura do projeto
 
 ```
 fraude-kafka/
@@ -64,7 +64,7 @@ fraude-kafka/
 
 ---
 
-## ✅ Pré-requisitos
+## Pré-requisitos
 
 - **Docker Desktop** (Windows/Mac) ou Docker Engine + Compose (Linux) — <https://docs.docker.com/get-docker/>
 - **Python 3.10 ou superior** — <https://www.python.org/downloads/>
@@ -78,11 +78,11 @@ docker compose version
 python --version      # no Linux/Mac pode ser: python3 --version
 ```
 
-## 🚀 Passo a passo
+## Passo a passo
 
 > Você vai usar **3 terminais** abertos dentro da pasta do projeto: um para o Docker (pode ser fechado depois de subir), um para o Consumer e um para o Producer.
 
-### 1️⃣ Criar o ambiente virtual e instalar dependências
+### 1 Criar o ambiente virtual e instalar dependências
 
 ```bash
 # Criar o ambiente virtual (isola as bibliotecas deste projeto)
@@ -97,12 +97,12 @@ python -m venv venv
 pip install -r requirements.txt
 ```
 
-> 💡 No PowerShell, se aparecer erro de permissão ao ativar, rode uma vez:
+>  No PowerShell, se aparecer erro de permissão ao ativar, rode uma vez:
 > `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
 
 Se ativou certo, aparece `(venv)` no início da linha do terminal.
 
-### 2️⃣ Subir o Kafka com Docker
+### 2 Subir o Kafka com Docker
 
 Abra o **Docker Desktop** (precisa estar aberto/rodando) e execute:
 
@@ -119,15 +119,15 @@ docker compose logs kafka | tail   # deve conter "Kafka Server started"
 
 Aguarde uns **15–20 segundos** após subir antes de continuar.
 
-### 3️⃣ Rodar o Consumer (Terminal 1)
+### 3 Rodar o Consumer (Terminal 1)
 
 ```bash
 python consumer.py
 ```
 
-Saída esperada: `✅ Consumer conectado. Aguardando mensagens...` — ele fica parado esperando. Deixe aberto.
+Saída esperada: ` Consumer conectado. Aguardando mensagens...` — ele fica parado esperando. Deixe aberto.
 
-### 4️⃣ Rodar o Producer (Terminal 2)
+### 4 Rodar o Producer (Terminal 2)
 
 Abra **outro** terminal na pasta do projeto, **ative o venv de novo** (passo 1) e execute:
 
@@ -139,11 +139,11 @@ Você verá uma transação enviada a cada 3 segundos, e no terminal do Consumer
 
 ```
 ✔ OK      | cliente=C003 valor=R$    312,40 cidade=Fortaleza       2026-10-21T14:30:05+00:00
-🚨 SUSPEITA | cliente=C001 valor=R$ 14.220,10 cidade=São Paulo     2026-10-21T14:30:08+00:00
-   ⚠ ALERTA ALTO_VALOR Valor R$ 14,220.10 >= R$ 10,000.00
+ SUSPEITA | cliente=C001 valor=R$ 14.220,10 cidade=São Paulo     2026-10-21T14:30:08+00:00
+   ALERTA ALTO_VALOR Valor R$ 14,220.10 >= R$ 10,000.00
 ```
 
-### 5️⃣ Conferir o banco de dados
+### 5 Conferir o banco de dados
 
 Com o consumer rodando (ou depois de parar com `Ctrl+C`):
 
@@ -168,7 +168,7 @@ Para também apagar as mensagens guardadas no Kafka, o `docker compose down` já
 
 ---
 
-## 🧪 Como testar / demonstrar as regras
+## Como testar / demonstrar as regras
 
 As regras disparam por acaso, então para a apresentação ajuda acelerar:
 
@@ -182,11 +182,11 @@ python producer.py --intervalo 1     # 1 transação por segundo
 
 > O requisito do trabalho é 3 segundos — rode sem `--intervalo` na versão "oficial" e use `--intervalo 1` só para acelerar a demonstração.
 
-## 🛠️ Problemas comuns
+##  Problemas comuns
 
 | Problema | Solução |
 |---|---|
-| `❌ Não consegui conectar no Kafka` | Docker Desktop fechado ou Kafka ainda iniciando. Rode `docker compose ps` e espere ~20s. |
+| ` Não consegui conectar no Kafka` | Docker Desktop fechado ou Kafka ainda iniciando. Rode `docker compose ps` e espere ~20s. |
 | `port is already allocated` (porta 9092) | Outro Kafka rodando. Pare-o ou execute `docker compose down`. |
 | `ModuleNotFoundError: kafka` | Venv não ativado, ou esqueceu o `pip install -r requirements.txt`. |
 | `TypeError` em `str \| None` | Python antigo. Use Python 3.10+. |
@@ -194,7 +194,7 @@ python producer.py --intervalo 1     # 1 transação por segundo
 | Cores estranhas (`←[31m`) no terminal | Use PowerShell/Windows Terminal; o `colorama` já está no `requirements.txt`. |
 | Quero recomeçar do zero | `docker compose down`, apague `transacoes.db`, `docker compose up -d`. |
 
-## 🧠 Como as regras foram implementadas (resumo)
+## Como as regras foram implementadas (resumo)
 
 1. O Consumer recebe a transação e **a salva primeiro** no SQLite.
 2. Em seguida roda as regras, que fazem consultas SQL no histórico do cliente (`WHERE id_cliente = ?`) em janelas de tempo:

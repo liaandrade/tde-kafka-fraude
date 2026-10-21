@@ -1,9 +1,4 @@
-"""
-Utilitário opcional: mostra o que foi salvo no SQLite (útil para provar no trabalho
-que TODAS as transações foram gravadas).
 
-Uso:  python consultar_banco.py
-"""
 import sqlite3
 
 from config import ARQUIVO_BANCO
